@@ -3,9 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../components/my_drawer.dart';
 import '../components/my_habit_tile.dart';
+import '../components/my_heat_map.dart';
 import '../database/habit_database.dart';
 import '../models/habit.dart';
-import '../utils/habit_utils.dart';
+import '../utils/app_utils.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -115,7 +116,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color.fromARGB(0, 176, 61, 61),
         foregroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       drawer: const MyDrawer(),
@@ -125,20 +126,39 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Theme.of(context).colorScheme.tertiary,
         child: const Icon(Icons.add),
       ),
-      body: ListView.builder(
-        itemCount: currentHabits.length,
-        itemBuilder: (BuildContext context, int index) {
-          final habit = currentHabits.elementAt(index);
-          bool isCompletedToday =
-              AppUtils.isHabitCompletedToday(habit.completedDays);
-          return MyHabitTile(
-            text: habit.name,
-            isCompleted: isCompletedToday,
-            onChanged: (value) => checkHabitOnOff(value, habit),
-            editHabit: (context) => createOrEditHabit(habit),
-            deleteHabit: (context) => deleteHabitBox(habit),
-          );
-        },
+      body: ListView(
+        children: [
+          FutureBuilder<DateTime?>(
+            future: habitDatabase.getFirstLaunchDate(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                return MyHeatMap(
+                  startDate: snapshot.data!,
+                  datasets: AppUtils.prepareHeatMapDataset(currentHabits),
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            },
+          ),
+          ListView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: currentHabits.length,
+            itemBuilder: (BuildContext context, int index) {
+              final habit = currentHabits.elementAt(index);
+              bool isCompletedToday =
+                  AppUtils.isHabitCompletedToday(habit.completedDays);
+              return MyHabitTile(
+                text: habit.name,
+                isCompleted: isCompletedToday,
+                onChanged: (value) => checkHabitOnOff(value, habit),
+                editHabit: (context) => createOrEditHabit(habit),
+                deleteHabit: (context) => deleteHabitBox(habit),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
